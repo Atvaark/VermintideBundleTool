@@ -11,7 +11,7 @@ namespace VermintideBundleTool.Bundle
     {
         public List<BundleFileEntry> Entries { get; set; }
 
-        public void Read(Stream input)
+        public void Read(Stream input, Stream temporaryFile)
         {
             BinaryReader reader = new BinaryReader(input, Encoding.ASCII, false);
 
@@ -23,7 +23,6 @@ namespace VermintideBundleTool.Bundle
             Debug.Assert(padding == 0x00000000);
 
             // TODO: Don't create a huge buffer. Just stream the chunks
-            var data = new byte[uncompressedSize];
             int dstOffset = 0;
             while (dstOffset < uncompressedSize)
             {
@@ -34,15 +33,11 @@ namespace VermintideBundleTool.Bundle
                 int length = dstOffset + uncompressedData.Length > uncompressedSize
                     ? uncompressedSize - dstOffset
                     : uncompressedData.Length;
-
-                Buffer.BlockCopy(uncompressedData, 0, data, dstOffset, length);
+                temporaryFile.Write(uncompressedData, 0, length);
                 dstOffset += length;
             }
-
-            using (var uncompressedInput = new MemoryStream(data))
-            {
-                ReadEntries(uncompressedInput);
-            }
+            temporaryFile.Position = 0;
+            ReadEntries(temporaryFile);
         }
 
         private void ReadEntries(Stream input)
@@ -64,19 +59,9 @@ namespace VermintideBundleTool.Bundle
             for (int i = 0; i < entryCount; i++)
             {
                 var entry = new BundleFileEntry();
-                try
-                {
-                    entry.Read(reader);
-                }
-                catch (Exception)
-                {
-                    entry.Data = new byte[0];
-                    entry.Hash = new BundleFileEntryHash();
-                    Debug.WriteLine("Failed to unpack entry {0}/{1}", i, entryCount);
-                }
+                entry.Read(reader);
                 entries.Add(entry);
             }
-
 
             Entries = entries;
         }

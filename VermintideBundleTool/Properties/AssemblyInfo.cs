@@ -6,7 +6,7 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("")]
 [assembly: AssemblyProduct("VermintideBundleTool")]
-[assembly: AssemblyCopyright("Copyright ©  2015 Atvaark")]
+[assembly: AssemblyCopyright("Copyright © 2015 Atvaark")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 [assembly: ComVisible(false)]

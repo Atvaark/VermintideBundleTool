@@ -4,18 +4,18 @@ namespace VermintideBundleTool.Bundle
 {
     public class BundleFileEntryHash
     {
-        public ulong Hash1;
-        public ulong Hash2;
+        public ulong ExtensionHash;
+        public ulong NameHash;
 
         public void Read(BinaryReader reader)
         {
-            Hash1 = reader.ReadUInt64();
-            Hash2 = reader.ReadUInt64();
+            ExtensionHash = reader.ReadUInt64();
+            NameHash = reader.ReadUInt64();
         }
 
         public override string ToString()
         {
-            return Hash1.ToString() + Hash2.ToString();
+            return ExtensionHash.ToString() + NameHash.ToString();
         }
     }
 }

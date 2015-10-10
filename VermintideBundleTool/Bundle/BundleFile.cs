@@ -22,6 +22,7 @@ namespace VermintideBundleTool.Bundle
             uint padding = reader.ReadUInt32();
             Debug.Assert(padding == 0x00000000);
 
+            // TODO: Don't create a huge buffer. Just stream the chunks
             var data = new byte[uncompressedSize];
             int dstOffset = 0;
             while (dstOffset < uncompressedSize)

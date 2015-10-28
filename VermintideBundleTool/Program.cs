@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data.HashFunction;
+using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -55,7 +56,7 @@ namespace VermintideBundleTool
                     errs => 1);
             return errorCode;
         }
-        
+
         private static int RunUnpackAndReturnExitCode(UnpackOption opts)
         {
             var nameDictionary = ReadDictionary(DictionaryFilePath);
@@ -106,7 +107,7 @@ namespace VermintideBundleTool
             int i = 1;
             foreach (var inputFilePath in inputFilePaths)
             {
-                var fileName = Path.GetFileName(inputFilePath);
+                var fileName = Path.GetFileNameWithoutExtension(inputFilePath);
                 var extension = Path.GetExtension(inputFilePath);
                 WriteLine(
                     string.Format("Renaming file {0}/{1}", i, inputFilePaths.Length),
@@ -134,10 +135,13 @@ namespace VermintideBundleTool
                 }
                 else
                 {
+                    string outputFileName = fileName + extension;
+
+                    Debug.WriteLine(string.Format("Missing name '{0}'", outputFileName));
                     WriteLine(
-                        string.Format("Unable to renamed {0}. Unknown ID", fileName),
+                        string.Format("Unable to renamed {0}. Unknown ID", outputFileName),
                         opts.Verbose);
-                    var outputFilePath = Path.Combine(opts.OutputDirectory, fileName);
+                    var outputFilePath = Path.Combine(opts.OutputDirectory, outputFileName);
                     File.Copy(inputFilePath, outputFilePath, true);
                 }
                 i++;
@@ -152,11 +156,17 @@ namespace VermintideBundleTool
             foreach (string fileName in File.ReadAllLines(dictionaryFilePath))
             {
                 ulong hash = BitConverter.ToUInt64(murmur.ComputeHash(Encoding.ASCII.GetBytes(fileName)), 0);
+                string existingFileName;
+                if (nameDictionary.TryGetValue(hash, out existingFileName))
+                {
+                    Debug.WriteLine("Overwriting '" + hash.ToString("x") +"' '" + existingFileName + "' with '" + fileName + "'");
+                }
+
                 nameDictionary[hash] = fileName;
             }
             return nameDictionary;
         }
-        
+
         private static void ExtractFilesFromBundleFile(string extactFile, string outPath, Dictionary<ulong, string> fileNames, bool verbose = false)
         {
             using (var input = File.OpenRead(extactFile))
@@ -175,27 +185,55 @@ namespace VermintideBundleTool
                     if (!fileNames.TryGetValue(entry.ExtensionHash, out entryExtension))
                     {
                         entryExtension = entry.ExtensionHash.ToString("x");
+                        Debug.WriteLine(string.Format("Missing extension '{0}'", entryExtension));
                     }
 
                     if (!fileNames.TryGetValue(entry.NameHash, out entryName))
                     {
                         entryName = entry.NameHash.ToString("x");
+                        Debug.WriteLine(string.Format("Missing name '{0}'", entryName));
                     }
 
                     string entryFileName = entryName + "." + entryExtension;
                     string outFilePath = Path.Combine(outPath, entryFileName);
 
-                    var directoryName = Path.GetDirectoryName(outFilePath);
+                    var directoryName = Path.GetDirectoryName(Path.Combine(outPath, entryFileName));
                     if (!Directory.Exists(directoryName))
                     {
                         Directory.CreateDirectory(directoryName);
                     }
+                    
+                    foreach (var data in entry.ReadData(temporaryFile))
+                    {
+                        entryFileName = entryName + ToLanguageName(data.LanguageId) + "." + entryExtension;
+                        outFilePath = Path.Combine(outPath, entryFileName);
+                        WriteLine(string.Format("Extracting file {0}/{1} '{2}'", i, file.Entries.Count, entryFileName), verbose);
 
-                    WriteLine(string.Format("Extracting file {0}/{1} '{2}'", i, file.Entries.Count, entryFileName), verbose);
-                    var entryData = entry.ReadData(temporaryFile);
-                    File.WriteAllBytes(outFilePath, entryData);
+                        File.WriteAllBytes(outFilePath, data.Data);
+                    }
+
                     i++;
                 }
+            }
+        }
+
+
+        private static string ToLanguageName(int languageId)
+        {
+            switch (languageId)
+            {
+                case 0:
+                    return ""; // eng
+                case 1:
+                    return ".ger";
+                case 2:
+                    return ".spa";
+                case 4:
+                    return ".rus";
+                case 8:
+                    return ".fre";
+                default:
+                    return ".unknown_" + languageId; // 32, 64, 128
             }
         }
 

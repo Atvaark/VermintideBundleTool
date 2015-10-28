@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 
@@ -7,13 +6,20 @@ namespace VermintideBundleTool.Bundle
 {
     public class BundleFileEntry
     {
-        private class BundleFileEntryChunk
+        public class BundleFileEntryData
         {
-            public int Index { get; set; }
+            public int LanguageId { get; set; }
+            public byte[] Data { get; set; }
+        }
+
+        private class BundleFileEntryHeader
+        {
+            public int LanguageId { get; set; }
             public int Size { get; set; }
             public int Unknown { get; set; }
         }
-        private List<BundleFileEntryChunk> Chunks { get; set; }
+
+        private List<BundleFileEntryHeader> EntryHeaders { get; set; }
 
         public ulong ExtensionHash;
 
@@ -26,34 +32,41 @@ namespace VermintideBundleTool.Bundle
             ExtensionHash = reader.ReadUInt64();
             NameHash = reader.ReadUInt64();
 
-            int chunkCount = reader.ReadInt32();
+            int count = reader.ReadInt32();
             int unknown1 = reader.ReadInt32();
-            var chunks = new List<BundleFileEntryChunk>(chunkCount);
-            for (int i = 0; i < chunkCount; i++)
+            var headers = new List<BundleFileEntryHeader>(count);
+            for (int i = 0; i < count; i++)
             {
-                var chunk = new BundleFileEntryChunk
+                var header = new BundleFileEntryHeader
                 {
-                    Index = reader.ReadInt32(),
+                    LanguageId = reader.ReadInt32(),
                     Size = reader.ReadInt32(),
                     Unknown = reader.ReadInt32()
                 };
-                chunks.Add(chunk);
+                headers.Add(header);
             }
-            Chunks = chunks;
+            EntryHeaders = headers;
             DataOffset = reader.BaseStream.Position;
 
-            var size = chunks.Sum(c => c.Size);
+            var size = headers.Sum(c => c.Size);
             reader.BaseStream.Position += size;
         }
 
 
-        public byte[] ReadData(Stream input)
+        public IEnumerable<BundleFileEntryData> ReadData(Stream input)
         {
             input.Position = DataOffset;
-            var size = Chunks.Sum(c => c.Size);
-            byte[] data = new byte[size];
-            input.Read(data, 0, size);
-            return data;
+
+            foreach (var entryData in EntryHeaders)
+            {
+                byte[] data = new byte[entryData.Size];
+                input.Read(data, 0, entryData.Size);
+                yield return new BundleFileEntryData
+                {
+                    LanguageId = entryData.LanguageId,
+                    Data = data
+                };
+            }
         }
     }
 }

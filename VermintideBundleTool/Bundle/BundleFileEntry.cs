@@ -57,13 +57,13 @@ namespace VermintideBundleTool.Bundle
         {
             input.Position = DataOffset;
 
-            foreach (var entryData in EntryHeaders)
+            foreach (var entryHeader in EntryHeaders)
             {
-                byte[] data = new byte[entryData.Size];
-                input.Read(data, 0, entryData.Size);
+                byte[] data = new byte[entryHeader.Size];
+                input.Read(data, 0, entryHeader.Size);
                 yield return new BundleFileEntryData
                 {
-                    LanguageId = entryData.LanguageId,
+                    LanguageId = entryHeader.LanguageId,
                     Data = data
                 };
             }

@@ -61,6 +61,7 @@
     <Compile Include="Bundle\BundleDatabaseFile.cs" />
     <Compile Include="Bundle\BundleFileEntry.cs" />
     <Compile Include="Bundle\BundleFileEntryHash.cs" />
+    <Compile Include="Bundle\BundleDecompressionStream.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
